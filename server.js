@@ -32,10 +32,10 @@ db.connect(function (err) {
 *▀▀▀▀▀▀▀▀▀▀▀**▀*********▀**▀************▀▀▀▀▀▀▀▀▀▀▀**▀▀▀▀▀▀▀▀▀▀▀*******▀*******▀▀▀▀▀▀▀▀▀▀▀**▀▀▀▀▀▀▀▀▀▀▀*******▀*********▀**▀*********▀**▀********▀▀**▀*********▀**▀▀▀▀▀▀▀▀▀▀▀**▀▀▀▀▀▀▀▀▀▀▀**▀*********▀*
 ********************************************************************************************************************************************************************************************************
 `); 
-    Prompt();
+    initPrompt();
 });
 
-function Prompt(){
+function initPrompt(){
   inquirer.prompt([
     {
       type: 'list',
@@ -49,7 +49,7 @@ function Prompt(){
       'Add Role',
       'View All Departments',
       'Add Department',
-      'Exit'
+      'Quit'
       ]
         
     }
@@ -73,13 +73,13 @@ function Prompt(){
           updateRole();
           break;
         case 'Add Role':
-          addRole();
+          getDept();
           break;
         case 'Add Department':
           addDepartment();
           break;
-        case 'Exit':
-          connection.end();
+        case 'Quit':
+          db.end();
           break;
         }
         
@@ -92,9 +92,16 @@ function Prompt(){
 
   //FUNCIONES 
 
-  function viewEmployees{
+  function viewEmployees(){
     let query = 
-    `SELECT *
+    `SELECT 
+        employee.id, 
+        employee.first_name, 
+        employee.last_name, 
+        role.title, 
+        department.name AS department, 
+        role.salary, 
+        CONCAT(manager.first_name, ' ', manager.last_name) AS manager
     FROM employee
     LEFT JOIN role
         ON employee.role_id = role.id
@@ -103,30 +110,92 @@ function Prompt(){
     LEFT JOIN employee manager
         ON manager.id = employee.manager_id`
   
-    connection.query(query, (err, res)=>{
+    db.query(query, (err, res)=>{
       if (err) throw err;
       console.table(res);
-      firstPrompt();
+      initPrompt();
     });
-  }
-  function viewDepartments{
+   }
+   function viewDepartments(){
+    let query = 
+    `SELECT * FROM department`
+  
+    db.query(query, (err, res)=>{
+      if (err) throw err;
+      console.table(res);
+      initPrompt();
+    });
+   }
+   function viewRoles(){
+    let query = 
+    `SELECT * FROM role`
+  
+    db.query(query, (err, res)=>{
+      if (err) throw err;
+      console.table(res);
+      initPrompt();
+    });
+   }
+   function addRole(deptchoices){
+    inquirer.prompt([
+      {
+        type: "input",
+        name: "title",
+        message: "What is the name of the role?"
+      },
+      {
+        type: "input",
+        name: "salary",
+        message: "What is the salary for this role?"
+      },
+      {
+        type: "list",
+        name: "department",
+        message: "What is the department for this role?",
+        choices: deptchoices
+      },
+    ]).then((res)=>{
+    let query = `INSERT INTO role SET ?`;
+    db.query(query, {title: res.title,salary: res.salary,department_id:res.department}, (err, res)=>{
+      if(err) throw err;
+      initPrompt();
+    });
+  });
+   }
 
-  }
-  function viewRoles{
+   function getDept(){
+    let query = `SELECT * FROM department`
+   db.query(query,(err, res) => {
+     if(err) throw err;
+     const deptchoices = res.map((choices) => ({
+       value: choices.id, name: choices.name
+     }));
+     console.table(res);
+     addRole(deptchoices);
+   })
 
-  }
-  function addRole{
+}
+   function addDepartment(){
+    inquirer.prompt([
+      {
+        type: "input",
+        name: "name",
+        message: "What is the name of the department?"
+      }
+    ]).then((res)=>{
+    let query = `INSERT INTO department(name) VALUES(?)`;
+    db.query(query, res.name,(err, res)=>{
+      if(err) throw err;
+      initPrompt();
+    });
+  });
+   }
+  // function addEmployee(){
 
-  }
-  function addDepartment{
+  // }
+  // function updateRole(){
 
-  }
-  function addEmployee{
-
-  }
-  function updateRole{
-
-  }
+  // }
 
   app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
