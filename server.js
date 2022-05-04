@@ -67,7 +67,7 @@ function initPrompt(){
           viewDepartments();
           break;
         case 'Add Employee':
-          addEmployee();
+          getRoles();
           break;
         case 'Update Employee Role':
           updateRole();
@@ -190,12 +190,108 @@ function initPrompt(){
     });
   });
    }
-  // function addEmployee(){
+   function addEmployee(roles){
+     db.query('SELECT * FROM employee', (err, res) => {
+       const managers = res.map(res => `${res.first_name} ${res.last_name} ${res.id}`);
+        managers.push('none')
+       inquirer.prompt([
+    {
+      type: "input",
+      name: "firstName",
+      message: "What is the employee's first name?"
+    },
+    {
+      type: "input",
+      name: "lastName",
+      message: "What is the employee's last name?"
+    },
+    {
+      type: "list",
+      name: "roleId",
+      message: "What is the employee's role?",
+      choices: roles
+    },
+     {
+       type: "list",
+       name: "managerID",
+       message: "Whos is their manager?",
+       choices: managers
+     }
+  ])
+.then((res)=>{
+   let roleid=res.roleId;
+   const finalid=parseInt(roleid.replace( /^\D+/g, ''));
+   let managerid = parseInt(res.managerID.replace( /^\D+/g, ''));
+   
 
-  // }
-  // function updateRole(){
-
-  // }
+      let query = `INSERT INTO employee SET ?`
+      db.query(query,{
+        first_name: res.firstName,
+        last_name: res.lastName,
+        role_id: finalid,
+         manager_id: managerid,
+      },(err, res)=>{
+        if(err) throw err;
+        initPrompt();
+    });
+  });
+});
+   }
+  function getRoles(){
+      let query = 
+      `SELECT * FROM role`
+  
+   db.query(query,(err, res)=>{
+      if(err)throw err;
+      const roles = res.map(choices => `${choices.title} ${choices.id}`);
+      addEmployee(roles)
+    });
+  }
+  function getEmployees(){
+    var employees;
+    let query = 
+    `SELECT * FROM employee`
+    db.query(query,(err, res)=>{
+    if(err)throw err;
+     employees = res.map(res => `${res.first_name} ${res.last_name} ${res.id}`);
+  });
+  return employees;
+}
+ function updateRole(){
+  var employees;
+  let query = 
+  `SELECT * FROM employee`
+  db.query(query,(err, res)=>{
+  if(err)throw err;
+   employees = res.map(res => `${res.first_name} ${res.last_name} ${res.id}`);
+   db.query(`SELECT * FROM role`, (err, data)=> {
+     if(err)throw err;
+   var roles = data.map(data => `${data.title} ${data.id}`);
+   
+    inquirer.prompt([
+      {
+        type: "list",
+        name: "employee",
+        message: "Which employee's role would you like to update?",
+        choices: employees,
+      },
+      {
+        type:"list",
+        name: "role",
+        message: "Which role would you like to assign this employee?",
+        choices: roles,
+      },
+    ]).then((res)=>{
+      var newrole = parseInt(res.role.replace( /^\D+/g, ''));
+      var employeeid = parseInt(res.employee.replace( /^\D+/g, ''));
+      let query = `UPDATE employee SET role_id = ? WHERE id = ?`
+      db.query(query,[ newrole, employeeid],(err, res)=>{
+          if(err)throw err;
+          initPrompt();
+        });
+  });});
+ });
+}
 
   app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);
